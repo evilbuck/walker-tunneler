@@ -35,12 +35,9 @@ parse_config() {
 
 build_menu() {
     local menu_items=()
-    local has_tunnels=false
     
     while IFS= read -r line; do
         [[ -z "$line" || "$line" =~ ^# ]] && continue
-        
-        has_tunnels=true
         
         local id label port_mapping ssh_host
         IFS='|' read -r id label port_mapping ssh_host <<< "$line"
@@ -58,10 +55,7 @@ build_menu() {
         fi
     done < "$CONFIG_FILE"
     
-    if [[ "$has_tunnels" != true ]]; then
-        echo "No tunnels configured"
-        return 1
-    fi
+    menu_items+=("⚙ Configure New Tunnel...")
     
     printf '%s\n' "${menu_items[@]}"
 }
@@ -122,15 +116,15 @@ main() {
     local menu_output
     menu_output=$(build_menu)
     
-    if [[ -z "$menu_output" ]] || [[ "$menu_output" == "No tunnels configured" ]]; then
-        echo "No tunnels configured" | walker --dmenu --placeholder "SSH Tunnels"
-        exit 0
-    fi
-    
     local selected
     selected=$(echo "$menu_output" | walker --dmenu --placeholder "SSH Tunnels")
     
     [[ -z "$selected" ]] && exit 0
+    
+    if [[ "$selected" == "⚙ Configure New Tunnel..." ]]; then
+        ${TERMINAL:-xdg-terminal-exec} ${EDITOR:-nano} "$CONFIG_FILE"
+        exit 0
+    fi
     
     local status label_with_port
     status=$(echo "$selected" | awk '{print $1}')
